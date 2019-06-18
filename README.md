@@ -1,3 +1,3 @@
 # labs.Aeegle.Hubspot
 
-Requirements Python >= 3.0
+Requirements Python > 3.0
