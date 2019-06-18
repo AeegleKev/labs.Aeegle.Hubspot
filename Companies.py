@@ -5,8 +5,6 @@ host = 'https://api.hubapi.com'
 hapikey = '8a7b8099-d61e-402d-ac36-0f1098d0c0c0'
 
 
-# populationData = []
-
 # GET DATA FROM .CSV FILE
 def get_data_from_file(fileName):
     with open(fileName, encoding='utf-8') as csvFile:
