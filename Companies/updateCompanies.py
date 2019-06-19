@@ -1,7 +1,7 @@
 # IMPORTS AND GLOBAL VARS
 import csv
 
-file = ['csv/companies.csv', 'UpdateCompanies.csv']
+file = ['../csv/companies.csv', '../csv/UpdateCompanies.csv']
 
 
 def get_company_csv():

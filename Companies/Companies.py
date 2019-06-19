@@ -108,7 +108,7 @@ def create_company(companies):
 
 # Unir y verificar dato a dato, ademas de actulizar o crear companies
 def merge_data_companies():
-    local_data = get_data_from_file('csv/data.csv')
+    local_data = get_data_from_file('../csv/data.csv')
     hubspot_data = get_all_companies()
     data_update = []  # COMPANIES QUE SE ACTUALIZARA
     data_create = []  # COMPANIES QUE SE CREARAN
