@@ -1,14 +1,17 @@
 import csv
 import json
+import time
 
 import requests
 import re
 
+# Global vars
 csv_file = ['../csv/Contacts.csv']
 host = 'https://api.hubapi.com'
 hapikey = '8a7b8099-d61e-402d-ac36-0f1098d0c0c0'
 
 
+# Open .csv file and load in memory
 def get_csv_contacts():
     with open(csv_file[0], encoding='utf-8') as file_contact:
         file_read = csv.DictReader(file_contact)
@@ -16,9 +19,11 @@ def get_csv_contacts():
         for row in file_read:
             data.append(row)
 
+        # Return a Dictionary with all contact data
         return data
 
 
+# Compare contacts
 def compare_contact(contact):
     pattron = re.compile('[0-9-]')
     data = {'firstname': '', 'lastname': '', 'email': '', 'company': '', 'jobtitle': '', 'phone': '', 'hs_language': '',
@@ -47,7 +52,6 @@ def compare_contact(contact):
             data.update({'hs_language': 'fr'})
         else:
             data.update({'hs_language': 'en-us'})
-
     else:
         if contact['SM_Language'] != 'NULL' and str(contact['SM_Language']).isdigit() is True:
             if contact['SM_Language'] == 1:
@@ -102,12 +106,77 @@ def compare_contact(contact):
     return data
 
 
-def save_hubspot_contact(contact):
-    # {{HOST}} /contacts/v1/search/query?q=Tilo
-    # Rivas
-    # SenStack @ njleg.org & hapikey = {{HApikey}}
-    # print(contact)
+def json_POST(contact):
+    if contact['hs_language'] == 'fr':
+        country = 'Canada'
+    else:
+        country = 'United State of America'
 
+    contact_data = {
+        "properties": [
+            {
+                "property": "firstname",
+                "value": contact['firstname'],
+            },
+            {
+                "property": "lastname",
+                "value": contact['lastname'],
+            },
+            {
+                "property": "email",
+                "value": contact['email'],
+            },
+            {
+                "property": "company",
+                "value": contact['company'],
+            },
+            {
+                "property": "jobtitle",
+                "value": contact['jobtitle'],
+            },
+            {
+                "property": "phone",
+                "value": contact['phone'],
+            },
+            {
+                "property": "hs_language",
+                "value": contact['hs_language'],
+            },
+            {
+                "property": "description",
+                "value": contact['description'],
+            },
+            {
+                "property": "mobilephone",
+                "value": contact['mobilephone'],
+            },
+            {
+                "property": "website",
+                "value": contact['website'],
+            },
+            {
+                "property": "industry",
+                "value": contact['industry'],
+            },
+            {
+                "property": "city",
+                "value": contact['city'],
+            },
+            {
+                "property": "leadsubject",
+                "value": contact['leadsubject'],
+            },
+            {
+                "property": "country",
+                "value": country
+            }
+        ]
+    }
+
+    return contact_data
+
+
+def save_hubspot_contact(contact):
     if contact['firstname'] and contact['lastname'] and contact['email']:
         url = '{0}/contacts/v1/search/query?q={1} {2} {3}&hapikey={4}'.format(host, contact['firstname'],
                                                                               contact['lastname'], contact['email'],
@@ -119,82 +188,33 @@ def save_hubspot_contact(contact):
         url = '{0}/contacts/v1/search/query?q={1}&hapikey={2}'.format(host, contact['lastname'], hapikey)
 
     response = requests.get(url)
-    response = json.loads(response.text)
-    if response['total'] == 0:
-        # {{HOST}}/contacts/v1/contact/?hapikey={{HApikey}}
+    try:
+        response = json.loads(response.text)
+
+        contact_data = json_POST(contact)
+
         url = '{0}/contacts/v1/contact/'.format(host)
         headers = {"Content-Type": "application/json"}
         hapi = {"hapikey": hapikey}
-        if contact['hs_language'] == 'fr':
-            country = 'Canada'
-        else:
-            country = 'United State of America'
-
-        contact_data = {
-            "properties": [
-                {
-                    "property": "firstname",
-                    "value": contact['firstname'],
-                },
-                {
-                    "property": "lastname",
-                    "value": contact['lastname'],
-                },
-                {
-                    "property": "email",
-                    "value": contact['email'],
-                },
-                {
-                    "property": "company",
-                    "value": contact['company'],
-                },
-                {
-                    "property": "jobtitle",
-                    "value": contact['jobtitle'],
-                },
-                {
-                    "property": "phone",
-                    "value": contact['phone'],
-                },
-                {
-                    "property": "hs_language",
-                    "value": contact['hs_language'],
-                },
-                {
-                    "property": "description",
-                    "value": contact['description'],
-                },
-                {
-                    "property": "mobilephone",
-                    "value": contact['mobilephone'],
-                },
-                {
-                    "property": "website",
-                    "value": contact['website'],
-                },
-                {
-                    "property": "industry",
-                    "value": contact['industry'],
-                },
-                {
-                    "property": "city",
-                    "value": contact['city'],
-                },
-                {
-                    "property": "leadsubject",
-                    "value": contact['leadsubject'],
-                },
-                {
-                    "property": "country",
-                    "value": country
-                }
-            ]
-        }
-        r = requests.request("POST", url, data=json.dumps(contact_data), headers=headers, params=hapi)
-        print(r.text)
+        if response['total'] == 0:
+            # {{HOST}}/contacts/v1/contact/?hapikey={{HApikey}}
+            r = requests.request("POST", url, data=json.dumps(contact_data), headers=headers, params=hapi)
+            print(r.text)
+        elif response['total'] == 1:
+            try:
+                if response["contacts"][0]['properties']['hs_language']['value']:
+                    print(response["contacts"][0]['properties']['hs_language']['value'])
+            except:
+                r = requests.request("POST", url, data=json.dumps(contact_data), headers=headers, params=hapi)
+                print(r.text)
+                time.sleep(3000)
+    except:
+        print(response.text)
+        time.sleep(3000)
 
 
 def save_contact():
+    i = 0
     data = []
     pattron = re.compile('[0-9]')
     csv_file = get_csv_contacts()
@@ -204,8 +224,10 @@ def save_contact():
                 data.append(compare_contact(cts))
 
     for d in data:
+        i += 1
         # print(i, ' ', d, '\n\n\n')
         save_hubspot_contact(d)
+        print('\n', i, '\n')
 
 
 if __name__ == "__main__":
