@@ -103,15 +103,17 @@ def create_company(companies):
         ]}
 
         r = requests.request("POST", url, data=json.dumps(data), headers=headers, params=hapi)
-        print(r.text)
+        print("{0} ... CREATED".format(company['name']))
+        # print(r.text)
 
 
 # Unir y verificar dato a dato, ademas de actulizar o crear companies
 def merge_data_companies():
-    local_data = get_data_from_file('../csv/data.csv')
+    local_data = get_data_from_file('../csv/Companies.csv')
     hubspot_data = get_all_companies()
     data_update = []  # COMPANIES QUE SE ACTUALIZARA
-    data_create = []  # COMPANIES QUE SE CREARAN
+    data_create = []  # COMPANIES QUE SE CREARAN TEMP
+    final_data_create = [] # COMPANIES QUE SE CREARAN
     not_found = []  # COMPANIES CON ERRORES
 
     for row in local_data:
@@ -120,20 +122,24 @@ def merge_data_companies():
 
             if (row['E-mail'].find('@') != -1):
                 domainLocal = row['E-mail'].split('@')
-                domainLocal = domainLocal[1]
+                domainLocal = domainLocal[1].strip()
             else:
                 domainLocal = False
 
             try:
-                domain = company['properties']['domain']['value']
+                domain = company['properties']['domain']['value'].strip()
             except Exception as err:
                 domain = False
 
             if (domainLocal and domain):
 
                 if (domainLocal == domain):
-                    if (row['Population'] != 'NULL' and row['Population'] != '' and row['Population'] != None):
+                    try:
+                        int(row['Population'])
                         data_update.append(format_population(company['companyId'], row['Population'], domain))
+                    except Exception as err:
+                        pass
+                        
                     found = True
 
         if (not (found)):
@@ -142,14 +148,24 @@ def merge_data_companies():
             else:
                 not_found.append(row)
 
-    # update_population(data_update)
 
-    # create_company(data_create)
 
-    print("Nuevos: {0} Erroneos: {1}".format(len(data_create), len(not_found)))
-    for data in data_create:
-        print(data, '\n\n')
 
+    for company in data_create:
+        try:
+            next( item for item in final_data_create if item['Domain Name']==company['Domain Name'])
+        except Exception as err:
+            final_data_create.append(company)
+
+    print("Nuevos: {0} Erroneos: {1} Update: {2}".format(len(final_data_create), len(not_found), len(data_update)))
+   
+    update_population(data_update)
+    create_company(final_data_create)
+
+    print("NEWS COMPANIES:")
+    for data in final_data_create:
+        print(dict(data)['Domain Name'])
+        
 
 if __name__ == '__main__':
     merge_data_companies()
