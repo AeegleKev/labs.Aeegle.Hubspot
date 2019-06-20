@@ -10,7 +10,7 @@ This app centralizes data that comes from .csv files to Hubspot automatically.
   
 
 
-### How to use contacts script
+# How to use contacts script
 - To execute the script and update contact data, you need to move .csv file that contains the contact information, to rout \csv\ with the name of Contacts.csv . Then access to the rout  \labs.Aeegle.Hubspot\Contacts by terminal and write
 ```sh
   $ cd \labs.Aeegle.Hubspot\Contacts
