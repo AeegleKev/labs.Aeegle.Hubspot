@@ -47,17 +47,8 @@ def compare_contact(contact):
     if contact['Telephone1']:
         data.update({'phone': contact['Telephone1']})
 
-    if contact['sm_LeadLanguage'] and contact['sm_LeadLanguage'] != 'NULL':
-        if contact['sm_LeadLanguage'] == 'French':
-            data.update({'hs_language': 'fr'})
-        else:
-            data.update({'hs_language': 'en-us'})
-    else:
-        if contact['SM_Language'] != 'NULL' and str(contact['SM_Language']).isdigit() is True:
-            if contact['SM_Language'] == 1:
-                data.update({'hs_language': 'fr'})
-            elif contact['SM_Language'] == 2:
-                data.update({'hs_language': 'en-us'})
+    if contact['hs_language'] and contact['hs_language'] != 'NULL':
+        data.update({'hs_language': contact['hs_language']})
 
     if contact['Description'] != 'NULL':
         data.update({'description': contact['Description']})
@@ -107,11 +98,6 @@ def compare_contact(contact):
 
 
 def json_POST(contact):
-    if contact['hs_language'] == 'fr':
-        country = 'Canada'
-    else:
-        country = 'United State of America'
-
     contact_data = {
         "properties": [
             {
@@ -165,10 +151,6 @@ def json_POST(contact):
             {
                 "property": "leadsubject",
                 "value": contact['leadsubject'],
-            },
-            {
-                "property": "country",
-                "value": country
             }
         ]
     }
@@ -177,40 +159,69 @@ def json_POST(contact):
 
 
 def save_hubspot_contact(contact):
-    if contact['firstname'] and contact['lastname'] and contact['email']:
-        url = '{0}/contacts/v1/search/query?q={1} {2} {3}&hapikey={4}'.format(host, contact['firstname'],
-                                                                              contact['lastname'], contact['email'],
-                                                                              hapikey)
-    elif contact['firstname'] and contact['lastname']:
-        url = '{0}/contacts/v1/search/query?q={1} {2}&hapikey={3}'.format(host, contact['firstname'],
-                                                                          contact['lastname'], hapikey)
-    elif contact['lastname']:
-        url = '{0}/contacts/v1/search/query?q={1}&hapikey={2}'.format(host, contact['lastname'], hapikey)
+    # if contact['firstname'] and contact['lastname'] and contact['email']:
+    #     url = '{0}/contacts/v1/search/query?q={1} {2} {3}&hapikey={4}'.format(host, contact['firstname'],
+    #                                                                           contact['lastname'], contact['email'],
+    #                                                                           hapikey)
+    # elif contact['firstname'] and contact['lastname']:
+    #     url = '{0}/contacts/v1/search/query?q={1} {2}&hapikey={3}'.format(host, contact['firstname'],
+    #                                                                       contact['lastname'], hapikey)
+    # elif contact['lastname']:
+    #     url = '{0}/contacts/v1/search/query?q={1}&hapikey={2}'.format(host, contact['lastname'], hapikey)
+    if contact['email']:
+        url = '{0}/contacts/v1/search/query?q={1}&hapikey={2}'.format(host, contact['email'], hapikey)
+        response = requests.get(url)
+        try:
+            response = json.loads(response.text)
 
-    response = requests.get(url)
-    try:
-        response = json.loads(response.text)
+            contact_data = json_POST(contact)
+            # print("CONTACT DATA")
+            # print(contact_data)
 
-        contact_data = json_POST(contact)
+            url = '{0}/contacts/v1/contact/'.format(host)
+            headers = {"Content-Type": "application/json"}
+            hapi = {"hapikey": hapikey}
+            if response['total'] == 0:
+                # {{HOST}}/contacts/v1/contact/?hapikey={{HApikey}}
+                # https: // api.hubapi.com / contacts / v1 / contact / email / testingapis @ hubspot.com / profile?hapikey = demo
 
-        url = '{0}/contacts/v1/contact/'.format(host)
-        headers = {"Content-Type": "application/json"}
-        hapi = {"hapikey": hapikey}
-        if response['total'] == 0:
-            # {{HOST}}/contacts/v1/contact/?hapikey={{HApikey}}
-            r = requests.request("POST", url, data=json.dumps(contact_data), headers=headers, params=hapi)
-            print(r.text)
-        elif response['total'] == 1:
-            try:
-                if response["contacts"][0]['properties']['hs_language']['value']:
-                    print(response["contacts"][0]['properties']['hs_language']['value'])
-            except:
+                print('CREANDO CONTACTO')
                 r = requests.request("POST", url, data=json.dumps(contact_data), headers=headers, params=hapi)
                 print(r.text)
-                time.sleep(3000)
-    except:
-        print(response.text)
-        time.sleep(3000)
+            elif response['total'] == 1:
+                print('CONTACTO EXISTE')
+                # url = '{0}/contacts/v1/contact/email/{1}/profile'.format(host, contact['email'])
+                url = '{0}/contacts/v1/contact/email/{1}/profile?hapikey={2}'.format(host, contact['email'], hapikey)
+                headers['Content-Type'] = 'application/json'
+                contact_data = {
+                    "properties": [
+                        {
+                            "property": "hs_language",
+                            "value": contact['hs_language'],
+                        }
+                    ]
+                }
+                try:
+                    if response["contacts"][0]['properties']['hs_language']['value']:
+                        print('CONTACTO EXISTE LANG')
+                        print(response["contacts"][0]['properties']['hs_language']['value'])
+                    else:
+                        print('UPDATE LANG 1')
+                        # r = requests.request("POST", url, data=json.dumps(contact_data), headers=headers, params=hapi)
+                        r = requests.post(data=json.dumps(contact_data), url=url, headers=headers)
+                        print(r)
+                        print(contact['email'])
+                        print(contact['hs_language'])
+                except:
+                    print('UPDATE LANG 2')
+                    r = requests.post(data=json.dumps(contact_data), url=url, headers=headers)
+                    print(r)
+                    print(contact['email'])
+                    print(contact['hs_language'])
+        except:
+            print('ERROR')
+            print(response.text)
+            time.sleep(3)
 
 
 def save_contact():
@@ -227,7 +238,7 @@ def save_contact():
         i += 1
         # print(i, ' ', d, '\n\n\n')
         save_hubspot_contact(d)
-        print('\n', i, '\n')
+        print(i)
 
 
 if __name__ == "__main__":
